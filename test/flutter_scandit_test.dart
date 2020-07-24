@@ -4,7 +4,11 @@ import 'package:flutter_scandit/flutter_scandit.dart';
 
 void main() {
   const MethodChannel channel = MethodChannel('flutter_scandit');
-  final FlutterScandit plugin = FlutterScandit(licenseKey: "123", symbologies: [Symbology.EAN13_UPCA]);
+
+  BarcodeCaptureSettings barcodeCaptureSettings=BarcodeCaptureSettings();
+  CameraSettings cameraSettings=CameraSettings(VideoResolution.AUTO);
+
+  final FlutterScandit plugin = FlutterScandit(licenseKey: "123", barcodeCaptureSettings: barcodeCaptureSettings, cameraSettings: cameraSettings);
 
   setUp(() {
     

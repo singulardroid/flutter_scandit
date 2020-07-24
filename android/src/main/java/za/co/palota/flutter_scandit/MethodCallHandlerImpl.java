@@ -5,6 +5,10 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.scandit.datacapture.barcode.data.Symbology;
+import com.scandit.datacapture.core.source.VideoResolution;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,6 +32,8 @@ public final class MethodCallHandlerImpl implements MethodChannel.MethodCallHand
 
     // parameters
     public static final String PARAM_SYMBOLOGIES = "symbologies";
+    public static final String PARAM_BARCODE_CAPTURE_SETTINGS = "barcodeCaptureSettings";
+    public static final String PARAM_CAMERA_SETTINGS = "cameraSettings";
     public static final String PARAM_LICENSE_KEY = "licenseKey";
 
     // errors
@@ -69,29 +75,31 @@ public final class MethodCallHandlerImpl implements MethodChannel.MethodCallHand
     private void handleScanBarcodeMethod(MethodCall call, MethodChannel.Result result) {
         Map<String, Object> args = (Map<String, Object>) call.arguments;
         if (args.containsKey(PARAM_LICENSE_KEY)) {
-            ArrayList<String> passedSymbologies = (ArrayList<String>) args.get(PARAM_SYMBOLOGIES);
-            List<Symbology> symbologies = new ArrayList<Symbology>();
-            for (String symbologyName : passedSymbologies) {
-                Symbology symbology = convertToSymbology(symbologyName);
-                if (symbology != null) {
-                    symbologies.add(symbology);
-                }
-            }
-            if (symbologies.isEmpty()) {
-                symbologies.add(Symbology.EAN13_UPCA); // default
-            }
-            startBarcodeScanner((String) args.get(PARAM_LICENSE_KEY), passedSymbologies, result);
+            String barcodeCaptureSettingsJSON = (String)args.get(PARAM_BARCODE_CAPTURE_SETTINGS);
+            Log.i(TAG, "handleScanBarcodeMethod: barcodeCaptureSettings="+barcodeCaptureSettingsJSON);
+
+            String cameraSettingsJSON = (String)args.get(PARAM_CAMERA_SETTINGS);
+            Log.i(TAG, "handleScanBarcodeMethod: cameraSettings="+cameraSettingsJSON);
+
+            startBarcodeScanner((String) args.get(PARAM_LICENSE_KEY), barcodeCaptureSettingsJSON,
+                    cameraSettingsJSON, result);
+
+
         } else {
             result.error(ERROR_NO_LICENSE, null, null);
         }
     }
 
-    private void startBarcodeScanner(String licenseKey, ArrayList<String> symbologies, MethodChannel.Result result) {
+    private void startBarcodeScanner(String licenseKey, String barcodeCaptureSettingsJSON,
+                                     String cameraSettingsJSON,
+                                     MethodChannel.Result result) {
         try {
             this.pendingActivityResult = result;
             Intent intent = new Intent(activity, BarcodeScanActivity.class);
             intent.putExtra(PARAM_LICENSE_KEY, licenseKey);
-            intent.putStringArrayListExtra(PARAM_SYMBOLOGIES, symbologies);
+            intent.putExtra(PARAM_BARCODE_CAPTURE_SETTINGS, barcodeCaptureSettingsJSON);
+            intent.putExtra(PARAM_CAMERA_SETTINGS, cameraSettingsJSON);
+//            intent.putStringArrayListExtra(PARAM_SYMBOLOGIES, symbologies);
             activity.startActivityForResult(intent, REQUEST_CODE_BARCODE_CAPTURE);
         } catch (Exception e) {
             result.error(ERROR_UNKNOWN, e.getMessage(), null);
@@ -140,6 +148,23 @@ public final class MethodCallHandlerImpl implements MethodChannel.MethodCallHand
 
     void stopListening() {
         methodChannel.setMethodCallHandler(null);
+    }
+
+    public static VideoResolution convertToVideoResolution(String name){
+        switch (name) {
+            case "AUTO":
+                return VideoResolution.AUTO;
+            case "FULL_HD":
+                return VideoResolution.FULL_HD;
+            case "HD":
+                return VideoResolution.HD;
+            case "UHD4K":
+                return VideoResolution.UHD4K;
+            case "HIGHEST":
+                return VideoResolution.HIGHEST;
+            default:
+                return VideoResolution.AUTO;
+        }
     }
 
     public static Symbology convertToSymbology(String name) {

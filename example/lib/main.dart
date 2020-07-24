@@ -54,10 +54,12 @@ class _BarcodeScanPageState extends State<BarcodeScanPage> {
             RaisedButton(
               onPressed: () async {
                 try {
-                  BarcodeResult result = await FlutterScandit(symbologies: [
-                    Symbology.EAN13_UPCA,
-                    Symbology.CODE128
-                  ], licenseKey: "-- ENTER YOUR SCANDIT LICENSE KEY HERE --")
+                  BarcodeCaptureSettings barcodeCaptureSettings=BarcodeCaptureSettings();
+                  CameraSettings cameraSettings=CameraSettings(VideoResolution.AUTO);
+
+                  BarcodeResult result = await FlutterScandit(licenseKey: "AbHeeiyWM0OzLKPuUhhvcYtBK8IZEYmAAgxvon8T25WpdLOhOW8jZ0hKQQY7Tr/suEacZSgY/AfFUNBqdXIeFzRj5V2DZYpmlnpHmQBgz/BJQuecJgXC0eA0YG1dRF2yCh4bSf0wHSHGoUt9nTczkTCfY8QKsIIt0Cd8N4nBdZ3Nk9sTKEkfRKDQdCpl9/8NFZWuSIbu7CPBxqIbcdCRVaO2itEls2deK3fFYaXOiK3uxspoqu5n5k2nLRN9rlxVJgWwmDQfDvA4OCImB/gPhx/yhBmqgqFgLQSFUNEfxBydDMSyLn3m9uLMciRRZMVI/tFPJBQgdbJs1CB3ee5WkYf8NDxhz6jVAbFz2I9/k3bikBkV+pEH7SoNnT+vEmc47ru9xx7TkRikbi8HUrZdRtYx0aFefRhjshUPjuVJy+3fvwuNj+5VCU1AfQqmXqSidDAbMPHIGAdijvcn3K/ftWNLClMI8x2Ci+OEv24TdoyLXj9Y8X0KI0DrRTqgoy2PAU7GKQu+dOjiAgiaDWnIY56dVZTmq5Zy23Kflydx83ivuDYMvnY7Hp91FwBR1amzt8y9n64QjVgD+wqV/e8y19Qlevv0VkD1NpYnGEs4soooCD/eRF7seKnB6lKt8A/sqo/LOzsBnIx5J3kstPFHgTvyNs17le9VVEcrpfluyUBw+0CazFJ6PG1TmRR9FEsf4yyyZPYCjvlolWcUtWYWj0hNQEXTIN5+hNB810BpfA+0zJMawD1C9yEQ/yM1mJChT61Syh+IBEF+wH2RzlFCnXDaFFgsMgWSTOWGz8dUDC/UsM0Iug3j",
+                    barcodeCaptureSettings: barcodeCaptureSettings,
+                    cameraSettings: cameraSettings)
                       .scanBarcode();
                   setState(() {
                     barcode = result;

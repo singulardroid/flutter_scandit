@@ -15,7 +15,9 @@ import com.scandit.datacapture.barcode.ui.overlay.BarcodeCaptureOverlay;
 import com.scandit.datacapture.core.capture.DataCaptureContext;
 import com.scandit.datacapture.core.data.FrameData;
 import com.scandit.datacapture.core.source.Camera;
+import com.scandit.datacapture.core.source.CameraSettings;
 import com.scandit.datacapture.core.source.FrameSourceState;
+import com.scandit.datacapture.core.time.TimeInterval;
 import com.scandit.datacapture.core.ui.DataCaptureView;
 import com.scandit.datacapture.core.ui.viewfinder.RectangularViewfinder;
 
@@ -26,10 +28,15 @@ import java.util.HashSet;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 public class BarcodeScanActivity
         extends CameraPermissionActivity implements BarcodeCaptureListener {
     public static final String BARCODE_ERROR = "error";
     public static final String BARCODE_DATA = "data";
+    public static final String BARCODE_SYMBOLOGIES = "symbologies";
     public static final String BARCODE_SYMBOLOGY = "symbology";
     public static final String EXCEPTION_MESSAGE = "exceptionMessage";
 
@@ -42,6 +49,8 @@ public class BarcodeScanActivity
 
     private String licenseKey;
     private HashSet<Symbology> symbologies;
+    private BarcodeCaptureSettings barcodeCaptureSettings;
+    private CameraSettings cameraSettings;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,24 +58,60 @@ public class BarcodeScanActivity
 
         Intent intent = getIntent();
         this.licenseKey = intent.getStringExtra(MethodCallHandlerImpl.PARAM_LICENSE_KEY);
-        ArrayList<String> passedSymbologies = intent.getStringArrayListExtra(MethodCallHandlerImpl.PARAM_SYMBOLOGIES);
-        symbologies = new HashSet<>();
 
-        if (passedSymbologies != null) {
-            for (String symbologyName : passedSymbologies) {
+        String barcodeCaptureSettingsJSON=intent.getStringExtra(MethodCallHandlerImpl.PARAM_BARCODE_CAPTURE_SETTINGS);
+        barcodeCaptureSettings=setBarcodeCaptureSettingsFromJSON(barcodeCaptureSettingsJSON);
+
+        String cameraSettingsJSON=intent.getStringExtra(MethodCallHandlerImpl.PARAM_CAMERA_SETTINGS);
+        cameraSettings=setCameraSettingsFromJSON(cameraSettingsJSON);
+
+        // Initialize and start the barcode recognition.
+        initializeAndStartBarcodeScanning();
+    }
+
+    private BarcodeCaptureSettings setBarcodeCaptureSettingsFromJSON(String barcodeCaptureSettingsJSON) {
+        barcodeCaptureSettings = new BarcodeCaptureSettings();
+        symbologies=new HashSet<Symbology>();
+
+        try {
+            JSONObject settings=new JSONObject(barcodeCaptureSettingsJSON);
+            JSONArray symbologiesArray=settings.getJSONArray(BARCODE_SYMBOLOGIES);
+
+            for(int i=0;i<symbologiesArray.length();i++){
+                String symbologyName=symbologiesArray.getString(i);
                 Symbology symbology = MethodCallHandlerImpl.convertToSymbology(symbologyName);
                 if (symbology != null) {
                     symbologies.add(symbology);
                 }
             }
-        }
-        if (symbologies.isEmpty()) {
-            symbologies.add(Symbology.EAN13_UPCA); // default
+
+            float codeDuplicateFilter=(float) settings.getDouble("codeDuplicateFilter");
+            barcodeCaptureSettings.setCodeDuplicateFilter(TimeInterval.seconds(codeDuplicateFilter));
+
+            barcodeCaptureSettings.enableSymbologies(this.symbologies);
+
+        } catch (JSONException e) {
+            finishWithError(MethodCallHandlerImpl.ERROR_UNKNOWN, e.getMessage());
         }
 
-        // Initialize and start the barcode recognition.
-        initializeAndStartBarcodeScanning();
+        return barcodeCaptureSettings;
     }
+
+    private CameraSettings setCameraSettingsFromJSON(String cameraSettingsJSON) {
+        cameraSettings=new CameraSettings();
+        try {
+            JSONObject settings=new JSONObject(cameraSettingsJSON);
+            cameraSettings.setPreferredResolution(MethodCallHandlerImpl.convertToVideoResolution(settings.getString("preferredResolution")));
+            cameraSettings.setMaxFrameRate((float)settings.getDouble("maxFrameRate"));
+            cameraSettings.setZoomFactor((float)settings.getDouble("zoomFactor"));
+            cameraSettings.setShouldPreferSmoothAutoFocus(settings.getBoolean("shouldPreferSmoothAutoFocus"));
+        } catch (JSONException e) {
+            finishWithError(MethodCallHandlerImpl.ERROR_UNKNOWN, e.getMessage());
+        }
+
+        return cameraSettings;
+    }
+
 
     private void finishWithError(String errorType, String errorMessage) {
         Intent data = new Intent();
@@ -90,7 +135,7 @@ public class BarcodeScanActivity
             camera = Camera.getDefaultCamera();
             if (camera != null) {
                 // Use the recommended camera settings for the BarcodeCapture mode.
-                camera.applySettings(BarcodeCapture.createRecommendedCameraSettings());
+                camera.applySettings(cameraSettings);
                 dataCaptureContext.setFrameSource(camera);
             } else {
                 finishWithError(MethodCallHandlerImpl.ERROR_NO_CAMERA, null);
@@ -99,14 +144,14 @@ public class BarcodeScanActivity
 
             // The barcode capturing process is configured through barcode capture settings
             // which are then applied to the barcode capture instance that manages barcode recognition.
-            BarcodeCaptureSettings barcodeCaptureSettings = new BarcodeCaptureSettings();
+//            BarcodeCaptureSettings barcodeCaptureSettings = new BarcodeCaptureSettings();
 
             // The settings instance initially has all types of barcodes (symbologies) disabled.
             // For the purpose of this sample we enable a very generous set of symbologies.
             // In your own app ensure that you only enable the symbologies that your app requires as
             // every additional enabled symbology has an impact on processing times.
 
-            barcodeCaptureSettings.enableSymbologies(this.symbologies);
+//            barcodeCaptureSettings.enableSymbologies(this.symbologies);
 
             // Some linear/1d barcode symbologies allow you to encode variable-length data.
             // By default, the Scandit Data Capture SDK only scans barcodes in a certain length range.
@@ -114,13 +159,11 @@ public class BarcodeScanActivity
             // falling outside the default range, you may need to adjust the "active symbol counts"
             // for this symbology. This is shown in the following few lines of code for one of the
             // variable-length symbologies.
-            SymbologySettings symbologySettings =
-                    barcodeCaptureSettings.getSymbologySettings(Symbology.CODE39);
-
-            HashSet<Short> activeSymbolCounts = new HashSet<>(
-                    Arrays.asList(new Short[]{7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}));
-
-            symbologySettings.setActiveSymbolCounts(activeSymbolCounts);
+//            SymbologySettings symbologySettings = barcodeCaptureSettings.getSymbologySettings(Symbology.CODE39);
+//
+//            HashSet<Short> activeSymbolCounts = new HashSet<>(Arrays.asList(new Short[]{7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}));
+//
+//            symbologySettings.setActiveSymbolCounts(activeSymbolCounts);
 
             // Create new barcode capture mode with the settings from above.
             barcodeCapture = BarcodeCapture.forDataCaptureContext(dataCaptureContext, barcodeCaptureSettings);
