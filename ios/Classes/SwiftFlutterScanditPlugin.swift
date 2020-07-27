@@ -9,6 +9,7 @@ public class SwiftFlutterScanditPlugin: NSObject, FlutterPlugin {
     
     private static var SYMBOLOGIES_KEY = "symbologies"
     
+    
     private static var SYMBOLOGIES_MAP: Dictionary<String, Symbology> = ["EAN13_UPCA":.ean13UPCA,
                                                                          "UPCE":.upce,
                                                                          "EAN8":.ean8,
