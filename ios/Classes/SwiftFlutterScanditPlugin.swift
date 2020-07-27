@@ -5,10 +5,13 @@ import ScanditBarcodeCapture
 
 public class SwiftFlutterScanditPlugin: NSObject, FlutterPlugin {
     private static var LICENSE_KEY = "licenseKey"
+    private static var PARAM_BARCODE_CAPTURE_SETTINGS = "barcodeCaptureSettings";
+    private static var PARAM_CAMERA_SETTINGS = "cameraSettings";
+    private static var PARAM_LOCATION_SELECTION="locationSelection";
+    private static var SYMBOLOGIES_KEY = "symbologies"
     private static var NO_LICENSE = "MISSING_LICENCE"
     
-    private static var SYMBOLOGIES_KEY = "symbologies"
-    
+    private static var VIDEO_RESOLUTIONS_MAP: Dictionary<String, VideoResolution> = ["AUTO":.auto,"HD":.hd,"FULL_HD":.fullHD,"HIGHEST":.highest,"UHD4K":.uhd4k]
     
     private static var SYMBOLOGIES_MAP: Dictionary<String, Symbology> = ["EAN13_UPCA":.ean13UPCA,
                                                                          "UPCE":.upce,
@@ -54,6 +57,7 @@ public class SwiftFlutterScanditPlugin: NSObject, FlutterPlugin {
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         if (call.method == "scanBarcode") {
             if let args = call.arguments as? NSDictionary {
+                print(args)
                 if(args[SwiftFlutterScanditPlugin.LICENSE_KEY] != nil){
                     var symbologies = [Symbology]()
                     if let passedSymbologies = args[SwiftFlutterScanditPlugin.SYMBOLOGIES_KEY] as? [String] {
