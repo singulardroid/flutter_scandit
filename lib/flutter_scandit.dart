@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:enum_to_string/enum_to_string.dart';
@@ -107,20 +108,43 @@ class CameraSettings {
 class BarcodeCaptureSettings {
   List<Symbology> symbologies;
   double codeDuplicateFilter;
+  LocationSelection locationSelection;
 
-  static const List<Symbology> defaultSymbologoes = [Symbology.EAN13_UPCA, Symbology.CODE39, Symbology.CODE128, Symbology.DATA_MATRIX, Symbology.QR];
+  static const List<Symbology> defaultSymbologies = [Symbology.EAN13_UPCA, Symbology.CODE39, Symbology.CODE128, Symbology.DATA_MATRIX, Symbology.QR];
   static const double defaultCodeDuplicateFilter =  0;
 
-  BarcodeCaptureSettings({this.symbologies = defaultSymbologoes, this.codeDuplicateFilter = defaultCodeDuplicateFilter});
+  BarcodeCaptureSettings({this.symbologies = defaultSymbologies,
+    this.codeDuplicateFilter = defaultCodeDuplicateFilter,
+  }){
+    SizeWithUnit s=SizeWithUnit(FloatWithUnit(1.0, MeasureUnit.FRACTION), FloatWithUnit(1.0, MeasureUnit.FRACTION));
+    this.locationSelection = RectangularLocationSelection.withSize(s);
+  }
 
   Map<String, dynamic> toJson(){
     return{
-      'symbologies':encodeToJson(symbologies),
-      'codeDuplicateFilter':codeDuplicateFilter
+      'symbologies':encodeSymbologiesToJson(symbologies),
+      'codeDuplicateFilter':codeDuplicateFilter,
+      'locationSelection': encodeLocationSelectionToJson(locationSelection)
     };
   }
 
-  static List encodeToJson(List<Symbology> list){
+  static Map<String, dynamic> encodeLocationSelectionToJson(LocationSelection locationSelection){
+    if (locationSelection is RadiusLocationSelection) {
+     return {
+        'type': (RadiusLocationSelection).toString(),
+        'value': (locationSelection as RadiusLocationSelection).radius.value,
+        'unit': EnumToString.parse((locationSelection as RadiusLocationSelection).radius.unit)
+      };
+    }else if (locationSelection is RectangularLocationSelection) {
+      return {
+      'type':(RectangularLocationSelection).toString(),
+      'width': {'value': locationSelection.width.value, 'unit': EnumToString.parse(locationSelection.width.unit)},
+      'height': {'value': locationSelection.height.value, 'unit': EnumToString.parse(locationSelection.height.unit)}
+      };
+    }
+  }
+
+  static List encodeSymbologiesToJson(List<Symbology> list){
     List jsonList = List();
     list.map( (item) => jsonList.add(EnumToString.parse(item))
       ).toList();
@@ -132,4 +156,46 @@ class TimeInterval {
   final double seconds;
 
   TimeInterval({this.seconds = 0});
+}
+
+class FloatWithUnit{
+  final double value;
+  final MeasureUnit unit;
+
+  FloatWithUnit(this.value, this.unit);
+}
+
+class SizeWithUnit{
+  final FloatWithUnit width;
+  final FloatWithUnit height;
+
+  SizeWithUnit(this.width, this.height);
+}
+
+abstract class LocationSelection{}
+
+class RadiusLocationSelection extends LocationSelection{
+  final FloatWithUnit radius;
+
+  RadiusLocationSelection(this.radius);
+}
+
+class RectangularLocationSelection extends LocationSelection{
+  FloatWithUnit width;
+  FloatWithUnit height;
+  double aspectRatio;
+
+  RectangularLocationSelection.withSize(SizeWithUnit size){
+    this.width=size.width;
+    this.height=size.height;
+    this.aspectRatio= this.width.value/this.height.value;
+  }
+
+  RectangularLocationSelection.withHeightAndAspectRatio(this.height, this.aspectRatio){
+    this.width=FloatWithUnit(this.height.value*this.aspectRatio, this.height.unit);
+  }
+
+  RectangularLocationSelection.withWidthAndAspectRatio(this.width, this.aspectRatio){
+    this.height=FloatWithUnit(this.width.value/this.aspectRatio, this.width.unit);
+  }
 }

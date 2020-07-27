@@ -62,3 +62,9 @@ enum CompositeFlag{
   GS1_TYPE_B,
   GS1_TYPE_C
 }
+
+enum MeasureUnit {
+  PIXEL,
+  DIP,
+  FRACTION
+}

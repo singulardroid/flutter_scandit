@@ -8,11 +8,15 @@ import com.scandit.datacapture.barcode.capture.BarcodeCapture;
 import com.scandit.datacapture.barcode.capture.BarcodeCaptureListener;
 import com.scandit.datacapture.barcode.capture.BarcodeCaptureSession;
 import com.scandit.datacapture.barcode.capture.BarcodeCaptureSettings;
-import com.scandit.datacapture.barcode.capture.SymbologySettings;
 import com.scandit.datacapture.barcode.data.Barcode;
 import com.scandit.datacapture.barcode.data.Symbology;
 import com.scandit.datacapture.barcode.ui.overlay.BarcodeCaptureOverlay;
+import com.scandit.datacapture.core.area.RadiusLocationSelection;
+import com.scandit.datacapture.core.area.RectangularLocationSelection;
 import com.scandit.datacapture.core.capture.DataCaptureContext;
+import com.scandit.datacapture.core.common.geometry.FloatWithUnit;
+import com.scandit.datacapture.core.common.geometry.MeasureUnit;
+import com.scandit.datacapture.core.common.geometry.SizeWithUnit;
 import com.scandit.datacapture.core.data.FrameData;
 import com.scandit.datacapture.core.source.Camera;
 import com.scandit.datacapture.core.source.CameraSettings;
@@ -20,9 +24,8 @@ import com.scandit.datacapture.core.source.FrameSourceState;
 import com.scandit.datacapture.core.time.TimeInterval;
 import com.scandit.datacapture.core.ui.DataCaptureView;
 import com.scandit.datacapture.core.ui.viewfinder.RectangularViewfinder;
+import com.scandit.datacapture.core.area.LocationSelection;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 
 import androidx.annotation.NonNull;
@@ -51,6 +54,7 @@ public class BarcodeScanActivity
     private HashSet<Symbology> symbologies;
     private BarcodeCaptureSettings barcodeCaptureSettings;
     private CameraSettings cameraSettings;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,14 +91,47 @@ public class BarcodeScanActivity
 
             float codeDuplicateFilter=(float) settings.getDouble("codeDuplicateFilter");
             barcodeCaptureSettings.setCodeDuplicateFilter(TimeInterval.seconds(codeDuplicateFilter));
-
             barcodeCaptureSettings.enableSymbologies(this.symbologies);
+
+            //LocationSelection locationSelection=locationSelectionFromJSON(settings.getJSONObject("locationSelection"));
+            //barcodeCaptureSettings.setLocationSelection(locationSelection);
 
         } catch (JSONException e) {
             finishWithError(MethodCallHandlerImpl.ERROR_UNKNOWN, e.getMessage());
         }
 
         return barcodeCaptureSettings;
+    }
+
+    private LocationSelection locationSelectionFromJSON(JSONObject locationSelection) {
+        LocationSelection locationSelectionResult=null;
+
+        try {
+            String locationSelectionClass = locationSelection.getString("type");
+            if (locationSelectionClass.equals("RadiusLocationSelection")){
+                float radiusValue=(float)locationSelection.getDouble("value");
+                MeasureUnit radiusMeasureUnit=MethodCallHandlerImpl.convertToMeasureUnit(locationSelection.getString("unit"));
+                FloatWithUnit radius= new FloatWithUnit(radiusValue,radiusMeasureUnit);
+                locationSelectionResult= new RadiusLocationSelection(radius);
+            }else if (locationSelectionClass.equals("RectangularLocationSelection")) {
+                JSONObject widthObj=locationSelection.getJSONObject("width");
+                JSONObject heightObj=locationSelection.getJSONObject("height");
+
+                float widthValue=(float)widthObj.getDouble("value");
+                float heightValue=(float)heightObj.getDouble("value");
+                MeasureUnit widthMeasureUnit=MethodCallHandlerImpl.convertToMeasureUnit(widthObj.getString("unit"));
+                MeasureUnit heightMeasureUnit=MethodCallHandlerImpl.convertToMeasureUnit(heightObj.getString("unit"));
+
+                FloatWithUnit width=new FloatWithUnit(widthValue,widthMeasureUnit);
+                FloatWithUnit height=new FloatWithUnit(heightValue,heightMeasureUnit);
+
+                locationSelectionResult=RectangularLocationSelection.withSize(new SizeWithUnit(width,height));
+            }
+        }catch (JSONException e) {
+            finishWithError(MethodCallHandlerImpl.ERROR_UNKNOWN, e.getMessage());
+        }
+
+        return locationSelectionResult;
     }
 
     private CameraSettings setCameraSettingsFromJSON(String cameraSettingsJSON) {
@@ -168,6 +205,7 @@ public class BarcodeScanActivity
             // Create new barcode capture mode with the settings from above.
             barcodeCapture = BarcodeCapture.forDataCaptureContext(dataCaptureContext, barcodeCaptureSettings);
 
+
             // Register self as a listener to get informed whenever a new barcode got recognized.
             barcodeCapture.addListener(this);
 
@@ -183,7 +221,7 @@ public class BarcodeScanActivity
 
             setContentView(dataCaptureView);
         } catch (Exception e) {
-            finishWithError(MethodCallHandlerImpl.ERROR_CAMERA_INITILISATION, e.getMessage());
+            finishWithError(MethodCallHandlerImpl.ERROR_CAMERA_INITIALISATION, e.getMessage());
         }
     }
 

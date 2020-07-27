@@ -5,7 +5,9 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.scandit.datacapture.barcode.data.Symbology;
+import com.scandit.datacapture.core.common.geometry.MeasureUnit;
 import com.scandit.datacapture.core.source.VideoResolution;
+
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -35,11 +37,12 @@ public final class MethodCallHandlerImpl implements MethodChannel.MethodCallHand
     public static final String PARAM_BARCODE_CAPTURE_SETTINGS = "barcodeCaptureSettings";
     public static final String PARAM_CAMERA_SETTINGS = "cameraSettings";
     public static final String PARAM_LICENSE_KEY = "licenseKey";
+    public static final String PARAM_LOCATION_SELECTION="locationSelection";
 
     // errors
     public static final String ERROR_NO_LICENSE = "MISSING_LICENCE";
     public static final String ERROR_PERMISSION_DENIED = "CAMERA_PERMISSION_DENIED";
-    public static final String ERROR_CAMERA_INITILISATION = "CAMERA_INITIALISATION_ERROR";
+    public static final String ERROR_CAMERA_INITIALISATION = "CAMERA_INITIALISATION_ERROR";
     public static final String ERROR_NO_CAMERA = "NO_CAMERA";
     public static final String ERROR_UNKNOWN = "UNKNOWN_ERROR";
 
@@ -75,11 +78,13 @@ public final class MethodCallHandlerImpl implements MethodChannel.MethodCallHand
     private void handleScanBarcodeMethod(MethodCall call, MethodChannel.Result result) {
         Map<String, Object> args = (Map<String, Object>) call.arguments;
         if (args.containsKey(PARAM_LICENSE_KEY)) {
+            Log.i(TAG, "handleScanBarcodeMethod: args "+args);
+
             String barcodeCaptureSettingsJSON = (String)args.get(PARAM_BARCODE_CAPTURE_SETTINGS);
-            Log.i(TAG, "handleScanBarcodeMethod: barcodeCaptureSettings="+barcodeCaptureSettingsJSON);
+            //Log.i(TAG, "handleScanBarcodeMethod: barcodeCaptureSettings="+barcodeCaptureSettingsJSON);
 
             String cameraSettingsJSON = (String)args.get(PARAM_CAMERA_SETTINGS);
-            Log.i(TAG, "handleScanBarcodeMethod: cameraSettings="+cameraSettingsJSON);
+            //Log.i(TAG, "handleScanBarcodeMethod: cameraSettings="+cameraSettingsJSON);
 
             startBarcodeScanner((String) args.get(PARAM_LICENSE_KEY), barcodeCaptureSettingsJSON,
                     cameraSettingsJSON, result);
@@ -148,6 +153,19 @@ public final class MethodCallHandlerImpl implements MethodChannel.MethodCallHand
 
     void stopListening() {
         methodChannel.setMethodCallHandler(null);
+    }
+
+    public static MeasureUnit convertToMeasureUnit(String name){
+        switch (name) {
+            case "PIXEL":
+                return MeasureUnit.PIXEL;
+            case "DIP":
+                return MeasureUnit.DIP;
+            case "FRACTION":
+                return MeasureUnit.FRACTION;
+            default:
+                return MeasureUnit.DIP;
+        }
     }
 
     public static VideoResolution convertToVideoResolution(String name){
