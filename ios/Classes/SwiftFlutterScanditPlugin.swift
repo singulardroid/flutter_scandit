@@ -3,13 +3,17 @@ import UIKit
 import ScanditCaptureCore
 import ScanditBarcodeCapture
 
+
 public class SwiftFlutterScanditPlugin: NSObject, FlutterPlugin {
     private static var LICENSE_KEY = "licenseKey"
     private static var PARAM_BARCODE_CAPTURE_SETTINGS = "barcodeCaptureSettings";
     private static var PARAM_CAMERA_SETTINGS = "cameraSettings";
     private static var PARAM_LOCATION_SELECTION="locationSelection";
-    private static var SYMBOLOGIES_KEY = "symbologies"
-    private static var NO_LICENSE = "MISSING_LICENCE"
+    private static var SYMBOLOGIES_KEY = "symbologies";
+    private static var NO_LICENSE = "MISSING_LICENCE";
+    
+//    private var barcodeCaptureSettingsJSON: BarcodeCaptureSettingsJSON;
+//    private var cameraSettingsJSON: CameraSettingsJSON;
     
     private static var VIDEO_RESOLUTIONS_MAP: Dictionary<String, VideoResolution> = ["AUTO":.auto,"HD":.hd,"FULL_HD":.fullHD,"HIGHEST":.highest,"UHD4K":.uhd4k]
     
@@ -59,6 +63,7 @@ public class SwiftFlutterScanditPlugin: NSObject, FlutterPlugin {
             if let args = call.arguments as? NSDictionary {
                 print(args)
                 if(args[SwiftFlutterScanditPlugin.LICENSE_KEY] != nil){
+                    
                     var symbologies = [Symbology]()
                     if let passedSymbologies = args[SwiftFlutterScanditPlugin.SYMBOLOGIES_KEY] as? [String] {
                         symbologies = passedSymbologies.map {convertToSymbology(name: $0)}.filter{$0 != nil}.map{$0!}
@@ -67,7 +72,11 @@ public class SwiftFlutterScanditPlugin: NSObject, FlutterPlugin {
                     }
                     
                     self.result = result
-                    let viewController: BarcodeScannerViewController = BarcodeScannerViewController(with: (args[SwiftFlutterScanditPlugin.LICENSE_KEY]! as? String)!,symbologies: symbologies)
+                    let viewController: BarcodeScannerViewController = BarcodeScannerViewController(with: (args[SwiftFlutterScanditPlugin.LICENSE_KEY]! as? String)!
+                        ,symbologies: symbologies
+                        , barcodeCaptureSettingsJSON: args[SwiftFlutterScanditPlugin.PARAM_BARCODE_CAPTURE_SETTINGS]! as? String ?? ""
+                        , cameraSettingsJSON: args[SwiftFlutterScanditPlugin.PARAM_CAMERA_SETTINGS]! as? String ?? "")
+                    
                     let navigationController = UINavigationController(rootViewController: viewController)
                     viewController.delegate = self
                     
@@ -104,6 +113,11 @@ public class SwiftFlutterScanditPlugin: NSObject, FlutterPlugin {
     private func convertToSymbology(name: String) -> Symbology? {
         return SwiftFlutterScanditPlugin.SYMBOLOGIES_MAP[name];
     }
+    
+    private func convertToVideoResolution(name: String) -> VideoResolution? {
+        return SwiftFlutterScanditPlugin.VIDEO_RESOLUTIONS_MAP[name];
+    }
+    
     
 }
 

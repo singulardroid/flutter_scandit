@@ -93,8 +93,8 @@ public class BarcodeScanActivity
             barcodeCaptureSettings.setCodeDuplicateFilter(TimeInterval.seconds(codeDuplicateFilter));
             barcodeCaptureSettings.enableSymbologies(this.symbologies);
 
-            //LocationSelection locationSelection=locationSelectionFromJSON(settings.getJSONObject("locationSelection"));
-            //barcodeCaptureSettings.setLocationSelection(locationSelection);
+            LocationSelection locationSelection=locationSelectionFromJSON(settings.getJSONObject("locationSelection"));
+            barcodeCaptureSettings.setLocationSelection(locationSelection);
 
         } catch (JSONException e) {
             finishWithError(MethodCallHandlerImpl.ERROR_UNKNOWN, e.getMessage());

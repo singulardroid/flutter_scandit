@@ -22,6 +22,45 @@ extension DataCaptureContext {
     }
 }
 
+
+struct CameraSettingsJSON: Decodable{
+    var preferredResolution: String
+    var maxFrameRate: CGFloat
+    var zoomFactor: CGFloat
+    var shouldPreferSmoothAutoFocus:Bool
+    
+    enum CodingKeys: String, CodingKey{
+        case preferredResolution
+        case maxFrameRate
+        case zoomFactor
+        case shouldPreferSmoothAutoFocus
+    }
+    
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        preferredResolution = try values.decode(String.self, forKey: .preferredResolution)
+        maxFrameRate = try values.decode(CGFloat.self, forKey: .maxFrameRate)
+        zoomFactor = try values.decode(CGFloat.self, forKey: .zoomFactor)
+        shouldPreferSmoothAutoFocus = try values.decode(Bool.self, forKey: .shouldPreferSmoothAutoFocus)
+    }
+}
+
+struct BarcodeCaptureSettingsJSON: Decodable{
+    var symbologies:[String]!
+    var codeDuplicateFilter: CGFloat;
+    
+    enum CodingKeys: String, CodingKey{
+        case symbologies
+        case codeDuplicateFilter
+    }
+    
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        symbologies = try values.decode([String].self, forKey: .symbologies)
+        codeDuplicateFilter = try values.decode(CGFloat.self, forKey: .codeDuplicateFilter)
+    }
+}
+
 class BarcodeScannerViewController: UIViewController {
     weak var delegate: BarcodeScannerDelegate?
     private var licenseKey: String!
@@ -31,15 +70,22 @@ class BarcodeScannerViewController: UIViewController {
     private var barcodeCapture: BarcodeCapture!
     private var captureView: DataCaptureView!
     private var overlay: BarcodeCaptureOverlay!
+    private var barcodeCaptureSettingsJSON: String!
+    private var cameraSettingsJSON: String!
+    
+    private var barcodeCaptureSettings: BarcodeCaptureSettings
+    private var cameraSettings: CameraSettings
    
     var closeImage: UIImage?
     
     private var backButton: UIButton = UIButton(type: .custom)
     
     
-    init(with licenseKey: String, symbologies: [Symbology]) {
+    init(with licenseKey: String, symbologies: [Symbology], barcodeCaptureSettingsJSON: String, cameraSettingsJSON: String ) {
         self.licenseKey = licenseKey
         self.symbologies = symbologies
+        self.barcodeCaptureSettingsJSON=barcodeCaptureSettingsJSON
+        self.cameraSettingsJSON=cameraSettingsJSON
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -51,6 +97,9 @@ class BarcodeScannerViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        
+        
         setupRecognition()
     }
 
@@ -94,7 +143,32 @@ class BarcodeScannerViewController: UIViewController {
         self.dismiss(animated: true, completion: nil)
     }
     
+    func parseBarcodeCaptureSettingsJSON(jsonData: String) -> BarcodeCaptureSettings {
+        let decoder = JSONDecoder();
+        self.barcodeCaptureSettings=BarcodeCaptureSettings.init();
+        do{
+            var barcodeCaptureSettingsJSONStruc=try decoder.decode(BarcodeCaptureSettingsJSON.self, from: jsonData.data(using: .utf8)!);
+            self.barcodeCaptureSettings.codeDuplicateFilter=barcodeCaptureSettingsJSONStruc.codeDuplicateFilter;
+            //self.barcodeCaptureSettings.sym
+        }catch{
+            print(error)
+        }
+        
+        
+        return
+        
+    }
+    
+    func parseCameraSettingsJSON(jsonData: String) -> CameraSettings {
+        
+    }
+    
     func setupRecognition() {
+        
+        barcodeCaptureSettings=parseBarcodeCaptureSettingsJSON(jsonData: barcodeCaptureSettingsJSON)
+        cameraSettings=parseCameraSettingsJSON(jsonData: cameraSettingsJSON)
+        
+        
         // Create data capture context using your license key.
         context = DataCaptureContext.licensed(licenseKey: licenseKey)
 
